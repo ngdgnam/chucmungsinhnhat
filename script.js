@@ -5,10 +5,10 @@ const bgMusic = document.getElementById("bgMusic");
 
 const birthdayLines = [
   "🎂 Chúc mừng sinh nhật 🎉",
-  "Chúc bạn có một ngày thật trọn vẹn và ý nghĩa.",
-  "Thêm tuổi mới – thêm niềm vui, thêm hạnh phúc ❤️",
-  "Mong mọi điều tốt đẹp nhất sẽ đến với bạn 🌟",
-  "Hãy luôn mỉm cười và tỏa sáng như chính bạn nhé 💫",
+  "Chúc anh sinh nhật thật vui vẻ, bình an và tràn đầy năng lượng tích cực. Thêm một tuổi mới, không chỉ là thêm con số, mà còn là thêm trải nghiệm, thêm trưởng thành, thêm bản lĩnh.",
+  "Chúc anh thêm nhiều bộ sưu tầm Gundam nữa",
+  "Mong anh sẽ giảm béo thành công =))",
+  "Chúc anh luôn hạnh phúc, vững vàng, và không quên mỉm cười dù đôi lúc cuộc sống có thử thách. Vì anh xứng đáng với tất cả những điều tốt đẹp nhất.",
   "Happy Birthday to You 🎈"
 ];
 
