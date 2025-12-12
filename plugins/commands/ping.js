@@ -1,20 +1,44 @@
-module.exports.config = {
-    name: 'ping',
-    version: '1.0.0',
-    role: 0,
-    author: 'Integrated Bot',
-    description: 'Kiem tra do tre cua bot',
-    category: 'Tien ich',
-    usage: 'ping',
-    cooldowns: 2
-};
+// author @GwenDev
+module.exports = {
+  name: "ping",
+  description: "Trả về pong kèm thời gian phản hồi!",
+  role: 2,
+  cooldown: 0,
+  group: "admin",
+  aliases: [
+    "ping của bot đây",
+    "bot ơi ping đi",
+    "ping đâu",
+    "test ping"
+  ],
+  noPrefix: true,
 
-module.exports.run = async ({ args, event, api }) => {
-    const { threadId, type } = event;
+  async run({ message, api }) {
+    const threadId = message.threadId;
+    const threadType = message.type;
+
     const start = Date.now();
 
-    await api.sendMessage({ msg: "Pong!" }, threadId, type);
+   
+    await api.sendMessage(
+      {
+        msg: "Đang đo ping...",
+        ttl: 2000
+      },
+      threadId,
+      threadType
+    );
 
-    const latency = Date.now() - start;
-    return api.sendMessage({ msg: `Latency: ${latency}ms` }, threadId, type);
+    const ping = Date.now() - start;
+
+    
+    await api.sendMessage(
+      {
+        msg: `🏓 Pong!\n⏱️ Ping: ${ping}ms`,
+        ttl: 30000
+      },
+      threadId,
+      threadType
+    );
+  }
 };

@@ -1,116 +1,110 @@
+// author @GwenDev
 const fs = require('fs');
-const path = require('path');
 const axios = require('axios');
-const cheerio = require('cheerio');
-const { getMessageCache } = require('../../utils/index');
+const path = require('path');
+const { load: cheerioLoad } = require('cheerio');
+// using CommonJS __dirname
+const { settings } = require('../../App/Settings.js');
 
-module.exports.config = {
-  name: 'adc',
-  version: '1.0.0',
+// __dirname exists in CommonJS
+const commandsDir = __dirname;
+
+
+async function uploadToDpaste(filePath) {
+  const content = await fs.promises.readFile(filePath, "utf8");
+  const payload = new URLSearchParams({
+    content,
+    syntax: "js",
+    title: path.basename(filePath),
+    expiry_days: "365",
+  });
+  const { data } = await axios.post(settings.apis?.dpaste?.baseUrl, payload, {
+    headers: {
+      Authorization: `Bearer ${settings.apis?.dpaste?.token}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    responseType: "text",
+  });
+  const link = String(data || "").trim();
+  const rawLink = link.replace(/\/$/, "") + ".txt";
+  return { link, rawLink };
+}
+
+
+async function fetchCodeFromUrl(url) {
+  if (url.includes("drive.google")) {
+    const idMatch = url.match(/[-\w]{25,}/);
+    if (!idMatch) throw new Error("Không lấy được ID tệp Google Drive");
+    const id = idMatch[0];
+    const res = await axios.get(`https://drive.google.com/u/0/uc?id=${id}&export=download`, { responseType: "arraybuffer" });
+    return res.data.toString();
+  }
+
+  if (url.includes("buildtool") || url.includes("tinyurl.com")) {
+    const { data: html } = await axios.get(url, { responseType: "text" });
+    const $ = cheerioLoad(html);
+    const codeBlock = $(".language-js").first();
+    if (!codeBlock?.text()) throw new Error("Không tìm thấy code trong trang");
+    return codeBlock.text();
+  }
+
+  const { data } = await axios.get(url, { responseType: "text" });
+  return data;
+}
+
+module.exports = {
+  name: "adc",
+  description: "Áp dụng code từ link raw vào lệnh mới hoặc upload code local lên dpaste",
   role: 2,
-  author: 'Integrated',
-  description: 'Upload/download code from paste sites; save as plugin',
-  category: 'Hệ Thống',
-  usage: 'adc [reply hoặc tên file]',
-  cooldowns: 2
-};
+  group: "admin",
+  cooldown: 0,
+  aliases: [],
+  noPrefix: false,
 
-module.exports.run = async function ({ api, event, args }) {
-  const { threadId, type, data } = event;
+  async run({ message, api, args }) {
+    const threadId = message.threadId;
+    const type = message.type;
 
-  if (!args[0]) return api.sendMessage('Vui lòng nhập tên file hoặc reply link chứa code!', threadId, type);
-  const name = args[0].replace(/\.js$/, '');
-  let link;
-
-  if (data?.quote?.cliMsgId) {
-    const messageCache = getMessageCache()[data.quote.cliMsgId];
-    link = messageCache?.content?.trim();
-  }
-
-  if (!link) {
-    const filePath = path.join(__dirname, `${name}.js`);
-    try {
-      const fileData = fs.readFileSync(filePath, 'utf-8');
-      const dpasteUrl = await uploadToDpaste(fileData);
-      return api.sendMessage(dpasteUrl, threadId, type);
-    } catch {
-      return api.sendMessage(`Không tìm thấy file "${name}.js" để upload.`, threadId, type);
+    const fileName = (args[0] || "").trim();
+    if (!fileName) {
+      return api.sendMessage("⚠️ Vui lòng nhập tên file. Dùng: .adc <tên-file> (reply link/raw hoặc không reply để upload lên dpaste)", threadId, type);
     }
-  }
 
-  const urlRegex = /https?:\/\/[\S]+/g;
-  const matched = link.match(urlRegex);
-  if (!matched || matched.length === 0) {
-    return api.sendMessage('Vui lòng chỉ reply 1 link hợp lệ!', threadId, type);
-  }
+    const linkText = String(
+      message.data?.quote?.content ||
+      message.data?.quote?.body ||
+      message.data?.quote?.msg ||
+      ""
+    ).trim();
 
-  const url = matched[0];
-
-  try {
-    if (url.includes('pastebin')) {
-      const { data } = await axios.get(url);
-      await writeCodeToFile(name, data, api, threadId, type);
-    } else if (url.includes('dpaste.com')) {
-      const rawUrl = url.endsWith('.txt') ? url : `${url}.txt`;
-      const { data } = await axios.get(rawUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-      await writeCodeToFile(name, data, api, threadId, type);
-    } else if (url.includes('buildtool') || url.includes('tinyurl.com')) {
-      const response = await axios.get(url);
-      const $ = cheerio.load(response.data);
-      const codeBlock = $('.language-js').first();
-      const code = codeBlock?.text()?.trim();
-
-      if (!code) {
-        return api.sendMessage('Không tìm thấy code trong trang.', threadId, type);
+    if (!linkText) {
+      try {
+        const filePath = path.join(commandsDir, `${fileName}.js`);
+        if (!fs.existsSync(filePath)) {
+          return api.sendMessage(`❎ Không tìm thấy file: ${fileName}.js`, threadId, type);
+        }
+        const { link, rawLink } = await uploadToDpaste(filePath);
+        return api.sendMessage(`✅ Tạo paste thành công!\nLink: ${link}\nRaw: ${rawLink}`, threadId, type);
+      } catch (err) {
+        console.error("[ADC] Upload lỗi:", err?.message || err);
+        return api.sendMessage(`❎ Lỗi khi upload: ${err?.response?.status || ""} ${err?.response?.data || err.message}`, threadId, type);
       }
-
-      await writeCodeToFile(name, code, api, threadId, type);
-    } else if (url.includes('drive.google')) {
-      const idMatch = url.match(/[-\w]{25,}/);
-      if (!idMatch) return api.sendMessage('Không lấy được ID từ link Google Drive.', threadId, type);
-      const fileID = idMatch[0];
-      const savePath = path.join(__dirname, `${name}.js`);
-      await downloadFile(`https://drive.google.com/u/0/uc?id=${fileID}&export=download`, savePath);
-      return api.sendMessage(`Đã tải plugin "${name}.js". Hãy dùng cmd load ${name} để sử dụng.`, threadId, type);
-    } else {
-      return api.sendMessage('Không hỗ trợ link này.', threadId, type);
     }
-  } catch (err) {
-    return api.sendMessage(`Lỗi khi xử lý: ${err.message}`, threadId, type);
-  }
+
+    const urlMatch = linkText.match(/https?:\/\/[\w\-._~:/?#[\]@!$&'()*+,;=%]+/i);
+    if (!urlMatch) {
+      return api.sendMessage("❎ Không tìm thấy link hợp lệ trong tin nhắn reply.", threadId, type);
+    }
+
+    const url = urlMatch[0];
+    try {
+      const code = await fetchCodeFromUrl(url);
+      const targetPath = path.join(commandsDir, `${fileName}.js`);
+      await fs.promises.writeFile(targetPath, code, "utf8");
+      return api.sendMessage(`☑️ Đã áp dụng code vào ${fileName}.js. Sử dụng .cmd load ${fileName} để tải lại lệnh!`, threadId, type);
+    } catch (err) {
+      console.error("[ADC] Tải code lỗi:", err?.message || err);
+      return api.sendMessage(`❎ Lỗi tải code: ${err?.message || err}`, threadId, type);
+    }
+  },
 };
-
-async function writeCodeToFile(name, code, api, threadId, type) {
-  const filePath = path.join(__dirname, `${name}.js`);
-  fs.writeFile(filePath, code, 'utf-8', (err) => {
-    if (err) return api.sendMessage(`Không thể ghi file "${name}.js".`, threadId, type);
-    api.sendMessage(`Đã tải plugin "${name}.js". Hãy dùng cmd load ${name} để sử dụng.`, threadId, type);
-  });
-}
-
-async function uploadToDpaste(code) {
-  try {
-    const response = await axios.post(
-      'https://dpaste.com/api/v2/',
-      `content=${encodeURIComponent(code)}&syntax=text&expiry_days=7`,
-      { headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'Mozilla/5.0' } }
-    );
-    if (response.data?.startsWith('https://dpaste.com/')) {
-      return response.data.trim() + '.txt';
-    } else {
-      throw new Error('Phản hồi không hợp lệ từ Dpaste.');
-    }
-  } catch (error) {
-    throw new Error('Không thể upload lên dpaste: ' + error.message);
-  }
-}
-
-async function downloadFile(url, filePath) {
-  const writer = fs.createWriteStream(filePath);
-  const response = await axios({ url, method: 'GET', responseType: 'stream' });
-  return new Promise((resolve, reject) => {
-    response.data.pipe(writer);
-    writer.on('finish', resolve);
-    writer.on('error', reject);
-  });
-}

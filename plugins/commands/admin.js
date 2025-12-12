@@ -1,51 +1,152 @@
-const { updateConfigArray, reloadConfig } = require('../../utils/index');
-const logger = require('../../utils/logger');
+// author @GwenDev
+const { query } = require('../../App/Database.js');
 
-module.exports.config = {
-    name: 'admin',
-    version: '1.0.0',
-    role: 2,
-    author: 'Integrated Bot',
-    description: 'Quan ly danh sach admin bot',
-    category: 'Admin',
-    usage: 'admin add|rm|list @tag',
-    cooldowns: 3
-};
+module.exports = {
+  name: "admin",
+  description: "Quản lý admin: add, rm, list, ban, unban",
+  role: 2,
+  group: "admin",
+  cooldown: 10,
+  async run({ message, api, args }) {
+    const mentions = message.data?.mentions || [];
+    const sub = args[0]?.toLowerCase();
+    const threadId = message.threadId;
+    const type = message.type;
+    const uid = message.data?.uidFrom;
 
-module.exports.run = async ({ args, event, api }) => {
-    const { threadId, type } = event;
-    const sub = args[0] ? args[0].toLowerCase() : '';
-    const mentions = event.data?.mentions || [];
-
-    if (!sub) return api.sendMessage({ msg: 'Cach su dung: admin add|rm|list @tag' }, threadId, type);
-
-    try {
-        if (sub === 'list') {
-            const admins = Array.isArray(global.config.admin_bot) ? global.config.admin_bot : [];
-            const text = admins.length ? `Danh sach admin:\n${admins.map((a, i) => `${i + 1}. ${a}`).join('\n')}` : 'Chua co admin nao.';
-            return api.sendMessage({ msg: text }, threadId, type);
-        }
-
-        if (sub === 'add' || sub === 'rm') {
-            if (!Array.isArray(mentions) || mentions.length === 0) return api.sendMessage({ msg: 'Vui long tag nguoi can them/bo admin.' }, threadId, type);
-
-            const current = Array.isArray(global.config.admin_bot) ? global.config.admin_bot.map(String) : [];
-            let updated = [...current];
-
-            for (const m of mentions) {
-                const uid = String(m.uid || m);
-                if (sub === 'add' && !updated.includes(uid)) updated.push(uid);
-                if (sub === 'rm') updated = updated.filter(x => x !== uid);
-            }
-
-            updateConfigArray('admin_bot', updated);
-            reloadConfig();
-            return api.sendMessage({ msg: `${sub === 'add' ? 'Da them' : 'Da bo'} ${mentions.length} nguoi vao danh sach admin.` }, threadId, type);
-        }
-
-        return api.sendMessage({ msg: 'Cach su dung: admin add|rm|list @tag' }, threadId, type);
-    } catch (e) {
-        logger.log('Loi lenh admin: ' + (e.message || e), 'error');
-        return api.sendMessage({ msg: 'Da xay ra loi khi thuc hien lenh admin.' }, threadId, type);
+  
+    const [userExists] = await query("SELECT uid FROM users WHERE uid = ?", [uid]);
+    if (!userExists) {
+      return api.sendMessage("Bạn chưa có tài khoản trong hệ thống. Vui lòng tương tác với bot trước.", threadId, type);
     }
+
+    switch (sub) {
+      case "add": {
+        if (mentions.length === 0) {
+          return api.sendMessage("Vui lòng tag người bạn muốn thêm làm admin.", threadId, type);
+        }
+
+        let successCount = 0;
+        for (const user of mentions) {
+       
+          const [existingUser] = await query("SELECT uid FROM users WHERE uid = ?", [user.uid]);
+          if (!existingUser) {
+            await api.sendMessage(`Người dùng ${user.dName || user.uid} chưa có tài khoản trong hệ thống.`, threadId, type);
+            continue;
+          }
+          
+          await query(
+            "UPDATE users SET admin = 2 WHERE uid = ?",
+            [user.uid]
+          );
+          successCount++;
+        }
+
+        if (successCount > 0) {
+          return api.sendMessage(`Đã thêm ${successCount} người làm admin`, threadId, type);
+        } else {
+          return api.sendMessage("Không có ai được thêm làm admin.", threadId, type);
+        }
+      }
+
+      case "rm": {
+        if (mentions.length === 0) {
+          return api.sendMessage("Vui lòng tag người bạn muốn gỡ quyền admin.", threadId, type);
+        }
+
+        let successCount = 0;
+        for (const user of mentions) {
+        
+          const [existingUser] = await query("SELECT uid FROM users WHERE uid = ?", [user.uid]);
+          if (!existingUser) {
+            await api.sendMessage(`Người dùng ${user.dName || user.uid} chưa có tài khoản trong hệ thống.`, threadId, type);
+            continue;
+          }
+          
+          await query("UPDATE users SET admin = 0 WHERE uid = ?", [user.uid]);
+          successCount++;
+        }
+
+        if (successCount > 0) {
+          return api.sendMessage(`Đã gỡ quyền admin của ${successCount} người.`, threadId, type);
+        } else {
+          return api.sendMessage("Không có ai bị gỡ quyền admin.", threadId, type);
+        }
+      }
+
+      case "list": {
+        const result = await query("SELECT uid, name, admin FROM users WHERE admin > 0 ORDER BY admin DESC");
+
+        if (result.length === 0) {
+          return api.sendMessage("Hiện tại chưa có ai là admin.", threadId, type);
+        }
+
+        const lines = [
+          "╭─────「 DANH SÁCH ADMIN 」─────⭓",
+          ...result.map((user, index) =>
+            `│ ${index + 1}. ${user.name || "Không rõ"} - ${user.uid}`),
+          "╰──────────────────────────────⭓"
+        ];
+
+        return api.sendMessage(lines.join("\n"), threadId, type);
+      }
+
+      case "ban": {
+        if (mentions.length === 0) {
+          return api.sendMessage("Vui lòng tag người bạn muốn cấm sử dụng bot.", threadId, type);
+        }
+
+        let successCount = 0;
+        for (const user of mentions) {
+       
+          const [existingUser] = await query("SELECT uid FROM users WHERE uid = ?", [user.uid]);
+          if (!existingUser) {
+            await api.sendMessage(`Người dùng ${user.dName || user.uid} chưa có tài khoản trong hệ thống.`, threadId, type);
+            continue;
+          }
+          
+          await query("UPDATE users SET ban = 1 WHERE uid = ?", [user.uid]);
+          successCount++;
+        }
+
+        if (successCount > 0) {
+          return api.sendMessage(`Đã cấm ${successCount} người sử dụng bot.`, threadId, type);
+        } else {
+          return api.sendMessage("Không có ai bị cấm.", threadId, type);
+        }
+      }
+
+      case "unban": {
+        if (mentions.length === 0) {
+          return api.sendMessage("Vui lòng tag người bạn muốn gỡ cấm.", threadId, type);
+        }
+
+        let successCount = 0;
+        for (const user of mentions) {
+          
+          const [existingUser] = await query("SELECT uid FROM users WHERE uid = ?", [user.uid]);
+          if (!existingUser) {
+            await api.sendMessage(`Người dùng ${user.dName || user.uid} chưa có tài khoản trong hệ thống.`, threadId, type);
+            continue;
+          }
+          
+          await query("UPDATE users SET ban = 0 WHERE uid = ?", [user.uid]);
+          successCount++;
+        }
+
+        if (successCount > 0) {
+          return api.sendMessage(`Đã gỡ cấm ${successCount} người.`, threadId, type);
+        } else {
+          return api.sendMessage("Không có ai được gỡ cấm.", threadId, type);
+        }
+      }
+
+      default:
+        return api.sendMessage(
+          "Cú pháp: admin add @tag | rm @tag | list | ban @tag | unban @tag",
+          threadId,
+          type
+        );
+    }
+  },
 };

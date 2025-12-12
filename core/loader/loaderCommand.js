@@ -37,6 +37,17 @@ async function loadCommands(commandName = null) {
             continue;
         }
 
+        // Support both plugin formats: { config: {...}, run } and legacy { name, run }
+        if (!command.config && command.name && typeof command.run === 'function') {
+            command.config = {
+                name: command.name,
+                description: command.description || '',
+                role: command.role || 0,
+                group: command.group || 'general',
+                aliases: command.aliases || [],
+            };
+        }
+
         if (!command.config || !command.config.name || typeof command.run !== "function") {
             logger.log(`Command ${file} khong hop le`, "warn");
             result = { status: false, error: `Command ${file} khong hop le` };

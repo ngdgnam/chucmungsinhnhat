@@ -32,6 +32,9 @@
     "qrcode": "^1.5.4",
     "socket.io": "^4.8.1",
     "yaml": "^2.8.2",
+    "node-fetch": "^2.6.7",
+    "moment-timezone": "^0.5.39",
+    "chess.js": "^1.0.0",
     "zca-js": "^2.0.4"
   }
 }
