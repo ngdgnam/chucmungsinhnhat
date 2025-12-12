@@ -59,6 +59,14 @@ global.botStartTime = Date.now();
     }
 
     logger.log("\n┏━━━━━━━━━━━━━━━━━━━━━━━━━━┓");
+
+    // Detect Termux or VPS environment for recommended settings
+    const isTermux = !!process.env.TERMUX_VERSION || (process.env.PREFIX && process.env.PREFIX.includes('/data/data/com.termux'));
+    if (isTermux) {
+        logger.log('Detected: Termux environment. Use `npm run start:termux` if needed.', 'info');
+    } else {
+        logger.log('Detected: Non-Termux environment (VPS/Server or Desktop).', 'info');
+    }
     for (let i = 0; i <= global.users.admin.length - 1; i++) {
         const dem = i + 1;
         logger.log(` ID ADMIN ${dem}: ${!global.users.admin[i] ? "Trong" : global.users.admin[i]}`);
@@ -78,10 +86,12 @@ global.botStartTime = Date.now();
     await loaderCommand();
     await loaderEvent();
 
-    startDashboard(null);
-
     const api = await login();
     global.api = api;
+
+    // Start dashboard with api instance so it can use bot API when needed
+    startDashboard(api);
+
 
     logger.log("Da dang nhap thanh cong", "info");
 

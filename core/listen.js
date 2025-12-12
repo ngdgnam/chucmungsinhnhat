@@ -3,8 +3,10 @@ const handleEvent = require("./handle/handleEvent");
 const { startAntiSpam } = require("./anti/antiSpam");
 const { startAntiLink } = require("./anti/antiLink");
 const { startAutoDown } = require("./auto/autoDown");
+const { startAutoSend } = require("./auto/autoSend");
 const logger = require("../utils/logger");
 const { updateMessageCache } = require("../utils/index");
+const { dispatchPendingReply } = require('./handle/handleReply');
 const Threads = require("./controller/controllerThreads");
 
 function startListening(api) {
@@ -22,6 +24,8 @@ function startListening(api) {
         const threadInfo = threadData?.data || {};
         const prefix = threadInfo.prefix ? threadInfo.prefix : global.config.prefix;
 
+        const handled = await dispatchPendingReply(event, api);
+        if (handled) return;
         handleEvent("message", event, api);
 
         const { data } = event;
@@ -47,10 +51,12 @@ function startListening(api) {
     startAntiSpam(api);
     startAntiLink(api);
     startAutoDown(api);
+    startAutoSend(api);
 
     logger.log("[ANTI] AntiSpam da duoc kich hoat", "anti");
     logger.log("[ANTI] AntiLink da duoc kich hoat", "anti");
     logger.log("[AUTO] AutoDown da duoc kich hoat", "auto");
+    logger.log("[AUTO] AutoSend da duoc kich hoat", "auto");
 
     api.listener.start();
     logger.log("Da bat dau lang nghe su kien", "info");
