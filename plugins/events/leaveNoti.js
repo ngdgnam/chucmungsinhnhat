@@ -6,6 +6,8 @@ module.exports.config = {
     description: 'Thong bao khi co nguoi roi nhom'
 };
 
+const { createLeaveImage } = require('../../utils/imageTemplates');
+
 module.exports.run = async ({ api, event, eventType }) => {
     if (event.type !== 1) return;
 
@@ -17,12 +19,28 @@ module.exports.run = async ({ api, event, eventType }) => {
 
     if (memberIds.length === 0) return;
 
-    let msg = "Tam biet:\n";
-    memberIds.forEach((member, i) => {
-        msg += `${i + 1}. ${member.dName || member.userId}\n`;
-    });
-
+    let grpName = data.groupName || "Nhóm";
     try {
-        await api.sendMessage({ msg }, threadId, 1);
-    } catch (e) {}
+        const info = await api.getGroupInfo(threadId);
+        const g = info?.gridInfoMap?.[String(threadId)];
+        if (g?.name) grpName = g.name;
+    } catch {}
+
+    for (const member of memberIds) {
+        const displayName = member.dName || member.userId || "Thành viên";
+        let sent = false;
+        try {
+            const outPath = await createLeaveImage({ api, uid: member.userId, name: displayName, groupName: grpName });
+            if (outPath) {
+                await api.sendMessage({ msg: `Tạm biệt ${displayName}!`, attachments: [outPath] }, threadId, 1);
+                sent = true;
+                try { require('fs').unlinkSync(outPath); } catch (e) {}
+            }
+        } catch (e) {}
+
+        if (!sent) {
+            const msg = `Tạm biệt ${displayName}!`;
+            try { await api.sendMessage({ msg }, threadId, 1); } catch (e) {}
+        }
+    }
 };
