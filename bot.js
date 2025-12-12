@@ -75,15 +75,15 @@ global.botStartTime = Date.now();
         cleanOldMessages();
     });
 
+    await loaderCommand();
+    await loaderEvent();
+
+    startDashboard(null);
+
     const api = await login();
     global.api = api;
 
     logger.log("Da dang nhap thanh cong", "info");
 
-    await loaderCommand();
-    await loaderEvent();
-
     listener(api);
-
-    startDashboard(api);
 })();

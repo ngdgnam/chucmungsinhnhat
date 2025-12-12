@@ -170,7 +170,11 @@
                     <h4 class="mb-4"><i class="fas fa-info-circle me-2"></i>Bot Info</h4>
                     <div class="info-item">
                         <span>Status</span>
+                        <% if (stats.isLoggedIn) { %>
                         <span class="status-online"><i class="fas fa-circle me-2"></i>Online</span>
+                        <% } else { %>
+                        <span style="color: #ffc107;"><i class="fas fa-circle me-2"></i>Waiting for Login</span>
+                        <% } %>
                     </div>
                     <div class="info-item">
                         <span>Bot Name</span>

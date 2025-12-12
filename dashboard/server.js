@@ -84,7 +84,8 @@ function startDashboard(api) {
             totalUsers,
             uptime,
             botName: global.config.name_bot,
-            prefix: global.config.prefix
+            prefix: global.config.prefix,
+            isLoggedIn: !!global.api
         };
     }
 

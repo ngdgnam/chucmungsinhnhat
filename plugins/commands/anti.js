@@ -1,5 +1,3 @@
-const Threads = require("../../core/controller/controllerThreads");
-
 module.exports.config = {
     name: 'anti',
     version: '1.0.0',
