@@ -55,4 +55,5 @@ Zalo Bot tich hop tu hai du an:
 - Prefix mac dinh: /
 
 ## Recent Changes
+- 2025-12-12: Hoan thanh tich hop du an - QR login, command/event system, Anti/Auto handlers, web dashboard
 - 2024: Khoi tao du an tich hop tu Zeid_Bot va GwenDev_ZaloChat
