@@ -113,6 +113,16 @@ function startDashboard(api) {
         res.json(getDashboardStats());
     });
 
+    app.get('/logs', (req, res) => {
+        try {
+            const limit = parseInt(req.query.limit) || 500;
+            const logs = logger.getRecentLogs(limit).join('\n');
+            res.type('text/plain').send(logs);
+        } catch (e) {
+            res.status(500).send('Could not load logs');
+        }
+    });
+
     io.on('connection', (socket) => {
         console.log('Client connected to dashboard');
 

@@ -18,6 +18,8 @@ allow_private_command: true
 default_money: 0
 
 dashboard_port: 5000
+# Optional: public host for the dashboard, e.g. your-vps-ip or domain
+dashboard_host: ''
 
 anti_spam:
   enabled: true
