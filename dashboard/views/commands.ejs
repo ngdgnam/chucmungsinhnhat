@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Commands - Zalo Bot Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #0068ff;
+            --dark-bg: #1a1a2e;
+            --card-bg: #16213e;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+        }
+        body {
+            background: linear-gradient(135deg, var(--dark-bg) 0%, #0f0f23 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+        .navbar {
+            background: rgba(22, 33, 62, 0.95) !important;
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+        .command-card {
+            background: linear-gradient(145deg, var(--card-bg), #1e2d4d);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            height: 100%;
+        }
+        .command-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0, 104, 255, 0.15);
+        }
+        .command-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #4facfe;
+            margin-bottom: 10px;
+        }
+        .command-desc {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+        .badge-role {
+            font-size: 0.75rem;
+            padding: 5px 10px;
+        }
+        .role-0 { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+        .role-1 { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .role-2 { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+        .nav-link {
+            color: var(--text-secondary) !important;
+            transition: color 0.3s ease;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: var(--text-primary) !important;
+        }
+        .category-header {
+            color: #4facfe;
+            font-size: 1.3rem;
+            margin: 30px 0 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(79, 172, 254, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-robot me-2"></i>Zalo Bot
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">Dashboard</a>
+                <a class="nav-link active" href="/commands">Commands</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-5">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1 class="mb-2">
+                    <i class="fas fa-terminal me-3"></i>Commands
+                </h1>
+                <p class="text-secondary">Total: <%= commands.length %> commands</p>
+            </div>
+        </div>
+
+        <% 
+        const categories = {};
+        commands.forEach(cmd => {
+            const cat = cmd.category || 'Khac';
+            if (!categories[cat]) categories[cat] = [];
+            categories[cat].push(cmd);
+        });
+        %>
+
+        <% for (const [category, cmds] of Object.entries(categories)) { %>
+            <h3 class="category-header">
+                <i class="fas fa-folder me-2"></i><%= category %>
+            </h3>
+            <div class="row g-4 mb-4">
+                <% cmds.forEach(cmd => { %>
+                    <div class="col-md-6 col-lg-4">
+                        <div class="command-card">
+                            <div class="command-name">
+                                <i class="fas fa-chevron-right me-2"></i><%= cmd.name %>
+                            </div>
+                            <div class="command-desc"><%= cmd.description %></div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="badge badge-role role-<%= cmd.role %>">
+                                    <% if (cmd.role === 0) { %>User
+                                    <% } else if (cmd.role === 1) { %>Support
+                                    <% } else { %>Admin<% } %>
+                                </span>
+                                <small class="text-secondary">
+                                    <i class="fas fa-clock me-1"></i><%= cmd.cooldown %>s cooldown
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+        <% } %>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+account_file: "account.json"
+
+login_qrcode: true
+qrcode_path: "qr.png"
+save_cookie: true
+
+prefix: "/"
+name_bot: "Zalo Bot"
+
+admin_bot:
+  - "1"
+  - "2"
+support_bot:
+  - "1"
+  - "2"
+
+allow_private_command: true
+default_money: 0
+
+dashboard_port: 5000
+
+anti_spam:
+  enabled: true
+  warning1: 3
+  warning2: 5
+  kick_limit: 6
+  time_window: 2000
+
+anti_link:
+  enabled: true
+  whitelist:
+    - "zalo.me"
+
+auto_down:
+  enabled: true
+
+zca_js_config:
+  selfListen: false
+  checkUpdate: true
+  logging: false
